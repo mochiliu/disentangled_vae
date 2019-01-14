@@ -12,7 +12,7 @@ from scipy.misc import imsave
 from model import VAE
 from data_manager import DataManager
 
-tf.app.flags.DEFINE_integer("epoch_size", 2000, "epoch size")
+tf.app.flags.DEFINE_integer("epoch_size", 200, "epoch size")
 tf.app.flags.DEFINE_integer("batch_size", 64, "batch size")
 tf.app.flags.DEFINE_float("gamma", 100.0, "gamma param for latent loss")
 tf.app.flags.DEFINE_float("capacity_limit", 20.0,
