@@ -10,10 +10,11 @@ import os
 #from scipy.misc import imsave
 import imageio
 
-from model import VAE
-from data_manager import DataManager
+from life_model import VAE
+from game_of_life_manager import GameManager
+import time
 
-tf.app.flags.DEFINE_integer("epoch_size", 200, "epoch size")
+tf.app.flags.DEFINE_integer("epoch_size", 2000, "epoch size")
 tf.app.flags.DEFINE_integer("batch_size", 64, "batch size")
 tf.app.flags.DEFINE_float("gamma", 100.0, "gamma param for latent loss")
 tf.app.flags.DEFINE_float("capacity_limit", 20.0,
@@ -23,9 +24,11 @@ tf.app.flags.DEFINE_integer("capacity_change_duration", 100000,
 tf.app.flags.DEFINE_float("learning_rate", 5e-4, "learning rate")
 tf.app.flags.DEFINE_string("checkpoint_dir", "checkpoints", "checkpoint directory")
 tf.app.flags.DEFINE_string("log_file", "./log", "log file directory")
-tf.app.flags.DEFINE_boolean("training", False, "training or not")
+tf.app.flags.DEFINE_boolean("training", True, "training or not")
 
 flags = tf.app.flags.FLAGS
+
+img_size = 32
 
 def train(sess,
           model,
@@ -38,23 +41,15 @@ def train(sess,
 
   reconstruct_check_images = manager.get_random_images(10)
 
-  indices = list(range(n_samples))
-
   step = 0
   
   # Training cycle
   for epoch in range(flags.epoch_size):
-    # Shuffle image indices
-    random.shuffle(indices)
-    
-    avg_cost = 0.0
-    total_batch = n_samples // flags.batch_size
     
     # Loop over all batches
-    for i in range(total_batch):
+    for i in range(flags.batch_size):
       # Generate image batch
-      batch_indices = indices[flags.batch_size*i : flags.batch_size*(i+1)]
-      batch_xs = manager.get_images(batch_indices)
+      batch_xs = manager.get_images(n_samples)
       
       # Fit training using batch data
       reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs, step)
@@ -79,17 +74,17 @@ def reconstruct_check(sess, model, images):
     os.mkdir("reconstr_img")
 
   for i in range(len(images)):
-    org_img = images[i].reshape(64, 64)*255
+    org_img = images[i].reshape(img_size, img_size)*255
     org_img = org_img.astype(np.float32)
-    reconstr_img = x_reconstruct[i].reshape(64, 64)*255
+    reconstr_img = x_reconstruct[i].reshape(img_size, img_size)*255
     imageio.imwrite("reconstr_img/org_{0}.png".format(i),      org_img.astype(np.uint8))
     imageio.imwrite("reconstr_img/reconstr_{0}.png".format(i), reconstr_img.astype(np.uint8))
 
 
 def disentangle_check(sess, model, manager, save_original=False):
-  img = manager.get_image(shape=1, scale=2, orientation=5)
-  if save_original:
-    imageio.imwrite("original.png", (img.reshape(64, 64)*255).astype(np.uint8))
+  img = manager.get_random_images(1)
+#  if save_original:
+#    imageio.imwrite("original.png", (img.reshape(64, 64)*255).astype(np.uint8))
     
   batch_xs = [img]
   z_mean, z_log_sigma_sq = model.transform(sess, batch_xs)
@@ -98,8 +93,9 @@ def disentangle_check(sess, model, manager, save_original=False):
   # Print variance
   zss_str = ""
   for i,zss in enumerate(z_sigma_sq):
-    str = "z{0}={1:.4f}".format(i,zss)
-    zss_str += str + ", "
+    zstr = "z{0}={1:.4f}".format(i,zss)
+    zss_str += zstr + ", "
+  zss_str += time.ctime()
   print(zss_str)
 
   # Save disentangled images
@@ -119,7 +115,7 @@ def disentangle_check(sess, model, manager, save_original=False):
         else:
           z_mean2[0][i] = z_m[i]
       reconstr_img = model.generate(sess, z_mean2)
-      rimg = reconstr_img[0].reshape(64, 64)*255
+      rimg = reconstr_img[0].reshape(img_size, img_size)*255
       imageio.imwrite("disentangle_img/check_z{0}_{1}.png".format(target_z_index,ri), rimg.astype(np.uint8))
       
 
@@ -137,8 +133,7 @@ def load_checkpoints(sess):
 
 
 def main(argv):
-  manager = DataManager()
-  manager.load()
+  manager = GameManager()
 
   sess = tf.Session()
   
