@@ -13,6 +13,7 @@ import imageio
 from life_model import VAE
 from game_of_life_manager import GameManager
 import time
+from threading import Thread
 
 tf.app.flags.DEFINE_integer("epoch_size", 2000, "epoch size")
 tf.app.flags.DEFINE_integer("batch_size", 64, "batch size")
@@ -30,6 +31,18 @@ flags = tf.app.flags.FLAGS
 
 img_size = 32
 
+class ThreadWithReturnValue(Thread):
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
+
 def train(sess,
           model,
           manager,
@@ -42,19 +55,34 @@ def train(sess,
   reconstruct_check_images = manager.get_random_images(10)
 
   step = 0
-  
+
+  batch_xs_one=manager.get_images(n_samples)   
+  batch_xs_two=manager.get_images(n_samples)     
+
   # Training cycle
   for epoch in range(flags.epoch_size):
     
     # Loop over all batches
-    for i in range(flags.batch_size):
+    for i in range(flags.batch_size//2):
       # Generate image batch
-      batch_xs = manager.get_images(n_samples)
+      twrv_one = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
+      twrv_one.start()
+      twrv_two = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
+      twrv_two.start()
       
-      # Fit training using batch data
-      reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs, step)
+      #batch_xs = manager.get_images(n_samples)
+      
+      # Fit training using batch data one
+      reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs_one, step)
       summary_writer.add_summary(summary_str, step)
       step += 1
+      # Fit training using batch data two
+      reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs_two, step)
+      summary_writer.add_summary(summary_str, step)
+      step += 1
+      
+      batch_xs_one=twrv_one.join()   
+      batch_xs_two=twrv_two.join()   
 
     # Image reconstruction check
     reconstruct_check(sess, model, reconstruct_check_images)
@@ -100,7 +128,7 @@ def disentangle_check(sess, model, manager, save_original=False):
 
   # Save disentangled images
   z_m = z_mean[0]
-  n_z = 10
+  n_z = 25
 
   if not os.path.exists("disentangle_img"):
     os.mkdir("disentangle_img")

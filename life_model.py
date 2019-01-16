@@ -129,8 +129,8 @@ class VAE(object):
       #W_conv4, b_conv4 = self._conv2d_weight_variable([4, 4, 32, 32], "conv4")
       W_fc1, b_fc1     = self._fc_weight_variable([4*4*32, 256], "fc1")
       W_fc2, b_fc2     = self._fc_weight_variable([256, 256], "fc2")
-      W_fc3, b_fc3     = self._fc_weight_variable([256, 10],  "fc3")
-      W_fc4, b_fc4     = self._fc_weight_variable([256, 10],  "fc4")
+      W_fc3, b_fc3     = self._fc_weight_variable([256, 25],  "fc3")
+      W_fc4, b_fc4     = self._fc_weight_variable([256, 25],  "fc4")
 
       x_reshaped = tf.reshape(x, [-1, 32, 32, 1])
       h_conv1 = tf.nn.relu(self._conv2d(x_reshaped, W_conv1, 2) + b_conv1) # (16, 16))
@@ -146,7 +146,7 @@ class VAE(object):
   
   def _create_generator_network(self, z, reuse=False):
     with tf.variable_scope("gen", reuse=reuse) as scope:
-      W_fc1, b_fc1 = self._fc_weight_variable([10,  256],    "fc1")
+      W_fc1, b_fc1 = self._fc_weight_variable([25,  256],    "fc1")
       W_fc2, b_fc2 = self._fc_weight_variable([256, 4*4*32], "fc2")
 
       # [filter_height, filter_width, output_channels, in_channels]
