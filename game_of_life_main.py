@@ -86,7 +86,7 @@ def disentangle_check(sess, model, manager, save_original=False):
 #  if save_original:
 #    imageio.imwrite("original.png", (img.reshape(64, 64)*255).astype(np.uint8))
     
-  batch_xs = [img]
+  batch_xs = img
   z_mean, z_log_sigma_sq = model.transform(sess, batch_xs)
   z_sigma_sq = np.exp(z_log_sigma_sq)[0]
 
