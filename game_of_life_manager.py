@@ -105,7 +105,7 @@ class GameManager(object):
         self.N = 30
         self.img_size = self.N + 2
         self.grid = randomGrid(self.N)
-        self.n_samples = 16*64
+        self.n_samples = 4*64
         self.skip_initial_iteration = 4
         
     def reset(self):

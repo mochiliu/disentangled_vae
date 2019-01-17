@@ -60,24 +60,20 @@ def train(sess,
   twrv_one.start()
   twrv_two = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
   twrv_two.start()  
-  twrv_three = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
-  twrv_three.start()  
   
   batch_xs_one=twrv_one.join()   
   batch_xs_two=twrv_two.join()  
-  batch_xs_three=twrv_three.join()
-  
+
   # Training cycle
   for epoch in range(flags.epoch_size):
     # Loop over all batches
-    for i in range(flags.batch_size//3):
+    for i in range(flags.batch_size//2):
       # Generate image batch
       twrv_one = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
       twrv_one.start()
       twrv_two = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
       twrv_two.start()
-      twrv_three = ThreadWithReturnValue(target=manager.get_images, args=(n_samples,))
-      twrv_three.start()  
+
       #batch_xs = manager.get_images(n_samples)
       
       # Fit training using batch data one
@@ -88,14 +84,9 @@ def train(sess,
       reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs_two, step)
       summary_writer.add_summary(summary_str, step)
       step += 1
-      # Fit training using batch data three
-      reconstr_loss, latent_loss, summary_str = model.partial_fit(sess, batch_xs_three, step)
-      summary_writer.add_summary(summary_str, step)
-      step += 1      
       
       batch_xs_one=twrv_one.join()   
       batch_xs_two=twrv_two.join()   
-      batch_xs_three=twrv_three.join()
     # Image reconstruction check
     reconstruct_check(sess, model, reconstruct_check_images)
 
